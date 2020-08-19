@@ -1,0 +1,24 @@
+//Thinger.io
+#define USERNAME "*************"
+#define DEVICE_ID "*************"
+#define DEVICE_CREDENTIAL "*************"
+
+//Leds URL
+#define LEDS_URL "************************"
+
+//Wifi
+#define SSID "************************"
+#define SSID_PASSWORD "************************"
+#define serialRate 115200 // use 115200 for ftdi based boards
+
+//PINS
+#define PIN_PRESENCE D6
+#define PIN_RF 0 //pin 0 = D3
+#define BUILTIN_LED 2
+
+//TIMMING
+#define TIME_ON_DAY 60000
+#define TIME_ON_NIGHT 7000
+#define STREAMING_TIME 10000
+#define NIGHT_HOUR_INIT 23
+#define NIGHT_HOUR_END 12
