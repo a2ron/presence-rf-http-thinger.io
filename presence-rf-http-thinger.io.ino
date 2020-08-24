@@ -29,12 +29,48 @@ void setup()
   Serial.begin(serialRate);
   pinMode(PIN_PRESENCE, INPUT);
   pinMode(BUILTIN_LED, OUTPUT);
-  digitalWrite(BUILTIN_LED, LOW);
+  digitalWrite(BUILTIN_LED, HIGH);
   mySwitch.enableTransmit(PIN_RF);
   thing.add_wifi(SSID, SSID_PASSWORD);
 
   thing["action"] << [](pson &in) {
     _sendRF(mySwitch, (int)in["protocol"], (int)in["pulseLength"], (int)in["code"], (int)in["repeatTransmit"]);
+  };
+
+  thing["state"] << [](pson &request) {
+    if (!request.is_empty())
+    {
+      digitalWrite(BUILTIN_LED, LOW);
+      String powerState = request["powerState"];
+      String endpointId = request["endpointId"];
+      int percentageState = request["brightness"];
+
+      if (endpointId == "a2-nightstands")
+      {
+        if (powerState == "ON")
+        {
+          sendRF(mySwitch, 11767553); //nightstand lamps ON
+          if (percentageState < 25)
+          {
+            sendRF(mySwitch, 11767562);
+          }
+          else if (percentageState < 50)
+          {
+            sendRF(mySwitch, 11767563);
+          }
+          else
+          {
+            sendRF(mySwitch, 11767564);
+          }
+          t_turnOff = millis() + STATE_REQUEST_DURATION;
+        }
+        else if (powerState == "OFF")
+        {
+          sendRF(mySwitch, 11767555); //nightstand lamps OFF
+        }
+      }
+      digitalWrite(BUILTIN_LED, HIGH);
+    };
   };
 
   thing["presence"] >> [](pson &out) {
@@ -44,16 +80,20 @@ void setup()
     out = httpCode;
   };
   timeClient.begin();
-  digitalWrite(BUILTIN_LED, LOW);
   Serial.println("\nWorking...");
-  delay(2000);
+  digitalWrite(BUILTIN_LED, LOW);
+  delay(500);
+  digitalWrite(BUILTIN_LED, HIGH);
+  delay(100);
+  digitalWrite(BUILTIN_LED, LOW);
+  delay(250);
   digitalWrite(BUILTIN_LED, HIGH);
 }
 
 void loop()
 {
   timeClient.update();
-  delay(200);
+  delay(100);
   thing.handle();
   presence = digitalRead(PIN_PRESENCE);
 
@@ -70,22 +110,18 @@ void loop()
       {
         sendRF(mySwitch, 11767553); //nightstand lamps ON
       }
+      digitalWrite(BUILTIN_LED, HIGH);
     }
     //setting turning off time
-    if (dayMode)
+    unsigned long int _t_turnOff = dayMode ? millis() + TIME_ON_DAY : millis() + TIME_ON_NIGHT;
+    if (_t_turnOff > t_turnOff)
     {
-      sendRF(mySwitch, 11767553); //nightstand lamps ON
-      t_turnOff = millis() + TIME_ON_DAY;
-    }
-    else
-    {
-      t_turnOff = millis() + TIME_ON_NIGHT;
+      t_turnOff = _t_turnOff;
     }
   }
   //turning off time out
   if (t_turnOff > 0 && t_turnOff < millis())
   {
-    digitalWrite(BUILTIN_LED, HIGH);
     t_turnOff = 0;
     sendRF(mySwitch, 11767555); //nightstand lamps OFF
     leds();                     //switch leds off
